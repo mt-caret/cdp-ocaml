@@ -1,0 +1,7 @@
+(executable
+ (name screenshot)
+ (public_name cdp_screenshot)
+ (package cdp_screenshot)
+ (libraries cdp core async)
+ (preprocess
+  (pps ppx_jane)))

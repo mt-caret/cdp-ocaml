@@ -1,0 +1,14 @@
+(library
+ (name cdp)
+ (public_name cdp)
+ (libraries
+  core
+  async
+  jsonaf
+  cohttp-async
+  async_websocket
+  cohttp_async_websocket
+  base64
+  uri)
+ (preprocess
+  (pps ppx_jane ppx_jsonaf_conv)))
