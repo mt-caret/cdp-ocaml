@@ -61,12 +61,13 @@ let%expect_test "Page.screenshot returns valid PNG bytes" =
       ~f:(fun browser ->
         Cdp.Page.with_page_exn (Cdp.Browser.connection browser) ~f:(fun page ->
           let%map png = Cdp.Page.screenshot_png_exn page in
-          print_endline (String.Hexdump.to_string_hum ~max_lines:3 png);
+          (* Only the PNG signature + IHDR header is stable across Chrome builds; the
+             compressed image data and total length vary, so hexdump just the prefix. *)
+          print_endline (String.Hexdump.to_string_hum (String.prefix png 32));
           [%expect
             {|
             00000000  89 50 4e 47 0d 0a 1a 0a  00 00 00 0d 49 48 44 52  |.PNG........IHDR|
-            ...
-            00000aa0  4e 44 ae 42 60 82                                 |ND.B`.|
+            00000010  00 00 03 20 00 00 02 58  08 02 00 00 00 15 14 15  |... ...X........|
             |}]))
       ()
   in
@@ -164,23 +165,21 @@ let%expect_test "Multiple pages multiplex over one browser-level connection" =
             in
             let%bind png_a = Cdp.Page.screenshot_png_exn page_a in
             print_endline "page_a:";
-            print_endline (String.Hexdump.to_string_hum ~max_lines:3 png_a);
+            print_endline (String.Hexdump.to_string_hum (String.prefix png_a 32));
             [%expect
               {|
               page_a:
               00000000  89 50 4e 47 0d 0a 1a 0a  00 00 00 0d 49 48 44 52  |.PNG........IHDR|
-              ...
-              00000ea0  42 60 82                                          |B`.|
+              00000010  00 00 03 20 00 00 02 58  08 02 00 00 00 15 14 15  |... ...X........|
               |}];
             let%map png_b = Cdp.Page.screenshot_png_exn page_b in
             print_endline "page_b:";
-            print_endline (String.Hexdump.to_string_hum ~max_lines:3 png_b);
+            print_endline (String.Hexdump.to_string_hum (String.prefix png_b 32));
             [%expect
               {|
               page_b:
               00000000  89 50 4e 47 0d 0a 1a 0a  00 00 00 0d 49 48 44 52  |.PNG........IHDR|
-              ...
-              00000ea0  48 d5 6b 00 00 00 00 49  45 4e 44 ae 42 60 82     |H.k....IEND.B`.|
+              00000010  00 00 03 20 00 00 02 58  08 02 00 00 00 15 14 15  |... ...X........|
               |}])
           ())
   in
