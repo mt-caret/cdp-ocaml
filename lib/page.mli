@@ -1,4 +1,8 @@
-(** A page (tab) attached to a browser-level CDP connection via a flat session. *)
+(** A page (tab) attached to a browser-level CDP connection via a flat session.
+
+    Beyond transport ([create]/[navigate]/[screenshot]/[close]), [Page] is the entry point
+    to the high-level DOM API: typed JS evaluation ({!eval}), page metadata, and keyboard
+    input. Element queries and actions live in {!Locator}, which takes a [Page.t]. *)
 
 open! Core
 open! Async
@@ -43,3 +47,35 @@ val session_id : t -> string
 
 (** The CDP target id underlying this page. *)
 val target_id : t -> string
+
+(** {1 JavaScript evaluation}
+
+    Evaluate an expression and decode its result per a {!Js_type} witness: e.g.
+    [eval page Int "1 + 1"], [eval page String "document.title"], or [eval page Json expr]
+    for the raw value. Pass an IIFE for multi-statement logic:
+    [(function(){ ...; return 42; })()]. *)
+
+val eval : t -> 'a Js_type.t -> string -> 'a Deferred.Or_error.t
+val eval_exn : t -> 'a Js_type.t -> string -> 'a Deferred.t
+
+(** {1 Page metadata} *)
+
+val title : t -> string Deferred.Or_error.t
+val title_exn : t -> string Deferred.t
+val url : t -> string Deferred.Or_error.t
+val url_exn : t -> string Deferred.t
+
+(** Serialized [document.documentElement.outerHTML]. *)
+val content : t -> string Deferred.Or_error.t
+
+val content_exn : t -> string Deferred.t
+
+(** {1 Keyboard (dispatched to the focused element)} *)
+
+val press : t -> ?modifiers:Key.Modifier.t -> Key.t -> unit Deferred.Or_error.t
+val press_exn : t -> ?modifiers:Key.Modifier.t -> Key.t -> unit Deferred.t
+
+(** Insert [text] as if typed (via [Input.insertText]), firing real input events. *)
+val type_text : t -> string -> unit Deferred.Or_error.t
+
+val type_text_exn : t -> string -> unit Deferred.t

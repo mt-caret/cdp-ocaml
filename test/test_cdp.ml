@@ -1,46 +1,6 @@
 open! Core
 open! Async
-
-(* Pin Log.Global's time source to [Time_ns.epoch] so log messages have a deterministic
-   timestamp in expect tests. The default output and UTC zone are fine. *)
-let () =
-  Synchronous_time_source.create ~now:Time_ns.epoch ()
-  |> Synchronous_time_source.read_only
-  |> Log.Global.set_time_source
-;;
-
-let with_server ~routes ~f =
-  let routes = String.Map.of_alist_exn routes in
-  let handler ~body:_ _addr req =
-    let path = Uri.path (Cohttp.Request.uri req) in
-    match Map.find routes path with
-    | Some body -> Cohttp_async.Server.respond_string ~status:`OK body
-    | None -> Cohttp_async.Server.respond_string ~status:`Not_found "not found"
-  in
-  let%bind server =
-    Cohttp_async.Server.create
-      ~on_handler_error:`Raise
-      Tcp.Where_to_listen.of_port_chosen_by_os
-      handler
-  in
-  let port = Cohttp_async.Server.listening_on server in
-  Monitor.protect
-    (fun () -> f ~port)
-    ~finally:(fun () -> Cohttp_async.Server.close server)
-;;
-
-let with_hanging_server ~f =
-  let%bind server =
-    Cohttp_async.Server.create
-      ~on_handler_error:`Raise
-      Tcp.Where_to_listen.of_port_chosen_by_os
-      (fun ~body:_ _addr _req -> Deferred.never ())
-  in
-  let port = Cohttp_async.Server.listening_on server in
-  Monitor.protect
-    (fun () -> f ~port)
-    ~finally:(fun () -> Cohttp_async.Server.close server)
-;;
+open Test_helpers
 
 let%expect_test "Chrome_path.find succeeds on this machine" =
   let%bind (_ : string) = Cdp.Chrome_path.find () >>| ok_exn in
@@ -224,8 +184,9 @@ let%expect_test "Page.close succeeds without error" =
 ;;
 
 let%expect_test "Browser.close cleans up the user-data-dir" =
-  (* mkdtemp gives directories a random suffix after the last [.] — scrub that so the
-     output is stable across runs while still showing the directory shape. *)
+  (* [Core_unix.mkdtemp] gives every profile a distinct ".tmp.<random>" suffix. Diff the
+     {e real} directory names so a previous test's not-yet-cleaned profile (which would
+     otherwise scrub to the same shape) cancels out; only then scrub for a stable display. *)
   let scrub_random_suffix s =
     match String.rsplit2 s ~on:'.' with
     | Some (prefix, _) -> prefix ^ ".<random>"
@@ -233,21 +194,22 @@ let%expect_test "Browser.close cleans up the user-data-dir" =
   in
   let cdp_profiles () =
     let%map entries = Sys.ls_dir Filename.temp_dir_name in
-    List.filter entries ~f:(String.is_prefix ~prefix:"cdp-profile-")
-    |> List.map ~f:scrub_random_suffix
-    |> String.Set.of_list
+    List.filter entries ~f:(String.is_prefix ~prefix:"cdp-profile-") |> String.Set.of_list
+  in
+  let scrub set =
+    Set.to_list set |> List.map ~f:scrub_random_suffix |> String.Set.of_list
   in
   let%bind before = cdp_profiles () in
   let%bind () =
     Cdp.Browser.with_browser_exn
       ~f:(fun _ ->
         let%map during = cdp_profiles () in
-        print_s [%sexp (Set.diff during before : String.Set.t)];
+        print_s [%sexp (scrub (Set.diff during before) : String.Set.t)];
         [%expect {| (cdp-profile-XXXXXX.tmp.<random>) |}])
       ()
   in
   let%bind after = cdp_profiles () in
-  print_s [%sexp (Set.diff after before : String.Set.t)];
+  print_s [%sexp (scrub (Set.diff after before) : String.Set.t)];
   [%expect
     {|
     1970-01-01 00:00:00.000000Z ("Websocket closed"(reason Normal_closure)(msg"Pipe was closed"))

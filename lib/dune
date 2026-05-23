@@ -3,6 +3,8 @@
  (public_name cdp)
  (libraries
   core
+  core_kernel.nonempty_list
+  bignum.bigint
   async
   jsonaf
   cohttp-async

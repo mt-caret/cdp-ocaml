@@ -82,3 +82,104 @@ module Page : sig
   (** The wire name of the [Page.loadEventFired] event. *)
   val load_event_fired_method_name : string
 end
+
+(** The CDP [RemoteObject.type]. *)
+module Remote_object_type : sig
+  type t =
+    | Object
+    | Function
+    | Undefined
+    | String
+    | Number
+    | Boolean
+    | Symbol
+    | Bigint
+  [@@deriving enumerate, sexp_of, to_string]
+end
+
+(** A CDP RemoteObject decoded by its [type]: serializable JS types carry an OCaml value;
+    [Undefined]/[Function]/[Symbol]/[Bigint] have no by-value JSON representation. With
+    [returnByValue], CDP sends no [subtype], so Date/Map/Set/Error all collapse to [Object]
+    of an empty JSON object. *)
+module Remote_object : sig
+  (** [of_jsonaf] decodes a raw JS-result JSON value structurally (it never yields
+      [Undefined]/[Function]/[Symbol]/[Bigint], which JSON can't represent). *)
+  type t =
+    | Null
+    | Undefined
+    | Boolean of bool
+    | Number of float
+    | String of string
+    | Object of Jsonaf.t
+    | Function
+    | Symbol
+    | Bigint of Bigint.t
+  [@@deriving sexp_of, of_jsonaf]
+end
+
+module Runtime : sig
+  (** [Runtime.evaluate] — evaluate a JS expression in the page and return its value. *)
+  module Evaluate : sig
+    module Params : sig
+      type t =
+        { expression : string
+        ; return_by_value : bool
+        ; await_promise : bool
+        }
+      [@@deriving jsonaf_of]
+    end
+
+    module Result : sig
+      (** The outcome of an evaluation: a returned RemoteObject, or a thrown exception
+          carrying the bare [exceptionDetails.text] and the exception's richer
+          [description] (the message-plus-stack) when present. *)
+      type t =
+        | Returned of Remote_object.t
+        | Exception of
+            { text : string
+            ; description : string option
+            }
+      [@@deriving sexp_of]
+    end
+
+    val method_ : (Params.t, Result.t, [ `Page ]) Method.t
+  end
+end
+
+module Input : sig
+  (** [Input.dispatchKeyEvent] — synthesize a single key event. A "press" is a [keyDown]
+      followed by a [keyUp] with the same fields. *)
+  module Dispatch_key_event : sig
+    (** The event kind. Serializes to the CDP wire strings ["keyDown"] / ["keyUp"] (used by
+        {!Params}'s derived serializer). *)
+    module Event_type : sig
+      type t =
+        | Key_down
+        | Key_up
+    end
+
+    module Params : sig
+      type t =
+        { type_ : Event_type.t
+        ; modifiers : int (** bitmask: Alt=1, Control=2, Meta=4, Shift=8 *)
+        ; key : string
+        ; code : string
+        ; windows_virtual_key_code : int
+        ; text : string option (** omitted from the wire when [None] *)
+        }
+      [@@deriving jsonaf_of]
+    end
+
+    val method_ : (Params.t, unit, [ `Page ]) Method.t
+  end
+
+  (** [Input.insertText] — insert text as if typed, firing real input events without
+      per-key code mapping. *)
+  module Insert_text : sig
+    module Params : sig
+      type t = { text : string } [@@deriving jsonaf_of]
+    end
+
+    val method_ : (Params.t, unit, [ `Page ]) Method.t
+  end
+end

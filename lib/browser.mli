@@ -14,11 +14,17 @@ type t
 
 val launch
   :  ?chrome_path:string
+  -> ?headless:bool (** default [true]; when [false], omits [--headless=new] *)
   -> ?extra_args:string list
   -> unit
   -> t Deferred.Or_error.t
 
-val launch_exn : ?chrome_path:string -> ?extra_args:string list -> unit -> t Deferred.t
+val launch_exn
+  :  ?chrome_path:string
+  -> ?headless:bool
+  -> ?extra_args:string list
+  -> unit
+  -> t Deferred.t
 
 (** Browser-level CDP connection. Use this to open new pages via {!Page.create}, run
     [Target.*] commands, etc. Don't [Connection.close] it — {!close} handles that. *)
@@ -33,10 +39,10 @@ val close
   -> unit Deferred.t
 
 (** [with_browser ~f ()] launches a browser, passes it to [f], and ensures it is closed
-    when [f] completes (success or failure). Any error from [launch] or [f] is
-    returned. [with_browser_exn] raises that error instead. *)
+    when [f] completes (success or failure). *)
 val with_browser
   :  ?chrome_path:string
+  -> ?headless:bool
   -> ?extra_args:string list
   -> f:(t -> 'a Deferred.Or_error.t)
   -> unit
@@ -44,6 +50,7 @@ val with_browser
 
 val with_browser_exn
   :  ?chrome_path:string
+  -> ?headless:bool
   -> ?extra_args:string list
   -> f:(t -> 'a Deferred.t)
   -> unit

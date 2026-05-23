@@ -38,7 +38,7 @@ let read_port_file path =
       [%message "DevToolsActivePort missing ws path" (contents : string)]
 ;;
 
-let launch ?chrome_path ?(extra_args = []) () =
+let launch ?chrome_path ?(headless = true) ?(extra_args = []) () =
   let open Deferred.Or_error.Let_syntax in
   let%bind chrome_path =
     match chrome_path with
@@ -48,19 +48,24 @@ let launch ?chrome_path ?(extra_args = []) () =
   let user_data_dir =
     Core_unix.mkdtemp (Filename.temp_dir_name ^/ "cdp-profile-XXXXXX")
   in
+  let headless_args =
+    match headless with
+    | true -> [ "--headless=new" ]
+    | false -> []
+  in
   let default_args =
-    [ "--headless=new"
-    ; "--no-sandbox"
-    ; "--disable-gpu"
-    ; "--hide-scrollbars"
-    ; "--mute-audio"
-    ; "--no-first-run"
-    ; "--no-default-browser-check"
-    ; "--remote-debugging-port=0"
-    ; "--remote-allow-origins=*"
-    ; [%string "--user-data-dir=%{user_data_dir}"]
-    ; "about:blank"
-    ]
+    headless_args
+    @ [ "--no-sandbox"
+      ; "--disable-gpu"
+      ; "--hide-scrollbars"
+      ; "--mute-audio"
+      ; "--no-first-run"
+      ; "--no-default-browser-check"
+      ; "--remote-debugging-port=0"
+      ; "--remote-allow-origins=*"
+      ; [%string "--user-data-dir=%{user_data_dir}"]
+      ; "about:blank"
+      ]
   in
   let%bind process =
     Process.create ~prog:chrome_path ~args:(default_args @ extra_args) ()
@@ -74,7 +79,10 @@ let launch ?chrome_path ?(extra_args = []) () =
   { process; user_data_dir; connection }
 ;;
 
-let launch_exn ?chrome_path ?extra_args () = launch ?chrome_path ?extra_args () >>| ok_exn
+let launch_exn ?chrome_path ?headless ?extra_args () =
+  launch ?chrome_path ?headless ?extra_args () >>| ok_exn
+;;
+
 let connection t = t.connection
 
 let remove_user_data_dir t =
@@ -117,13 +125,13 @@ let close
   remove_user_data_dir t
 ;;
 
-let with_browser ?chrome_path ?extra_args ~f () =
-  match%bind launch ?chrome_path ?extra_args () with
+let with_browser ?chrome_path ?headless ?extra_args ~f () =
+  match%bind launch ?chrome_path ?headless ?extra_args () with
   | Error _ as e -> return e
   | Ok browser -> Monitor.protect (fun () -> f browser) ~finally:(fun () -> close browser)
 ;;
 
-let with_browser_exn ?chrome_path ?extra_args ~f () =
-  let%bind browser = launch_exn ?chrome_path ?extra_args () in
+let with_browser_exn ?chrome_path ?headless ?extra_args ~f () =
+  let%bind browser = launch_exn ?chrome_path ?headless ?extra_args () in
   Monitor.protect (fun () -> f browser) ~finally:(fun () -> close browser)
 ;;

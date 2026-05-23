@@ -1,5 +1,6 @@
 open! Core
 open! Async
+module Event_type = Protocol.Input.Dispatch_key_event.Event_type
 
 type t =
   { connection : Connection.t
@@ -100,3 +101,44 @@ let with_page_exn connection ~f =
          tear the whole process down anyway. *)
       Clock_ns.with_timeout (Time_ns.Span.of_int_sec 2) (close page) |> Deferred.ignore_m)
 ;;
+
+(* High-level DOM layer. Keyboard and evaluation are inlined here (they only need [call]);
+   element queries/actions live in {!Locator}, which is parameterized by a [Page.t]. *)
+
+let eval (type a) t (witness : a Js_type.t) expression : a Deferred.Or_error.t =
+  let%bind.Deferred.Or_error result =
+    call
+      t
+      Protocol.Runtime.Evaluate.method_
+      { expression; return_by_value = true; await_promise = true }
+  in
+  Deferred.return
+    (match (result : Protocol.Runtime.Evaluate.Result.t) with
+     | Returned remote_object -> Js_type.decode witness remote_object
+     | Exception { text; description } ->
+       Or_error.error_s
+         [%message "JS evaluation raised" (text : string) (description : string option)])
+;;
+
+let eval_exn t witness expression = eval t witness expression >>| ok_exn
+let title t = eval t Js_type.String "document.title"
+let url t = eval t Js_type.String "location.href"
+let content t = eval t Js_type.String "document.documentElement.outerHTML"
+
+let press t ?(modifiers = Key.Modifier.empty) key =
+  let dispatch event_type =
+    call
+      t
+      Protocol.Input.Dispatch_key_event.method_
+      (Key.dispatch_params key ~modifiers ~event_type)
+  in
+  let%bind.Deferred.Or_error () = dispatch Event_type.Key_down in
+  dispatch Event_type.Key_up
+;;
+
+let type_text t text = call t Protocol.Input.Insert_text.method_ { text }
+let title_exn t = title t >>| ok_exn
+let url_exn t = url t >>| ok_exn
+let content_exn t = content t >>| ok_exn
+let press_exn t ?modifiers key = press t ?modifiers key >>| ok_exn
+let type_text_exn t text = type_text t text >>| ok_exn
