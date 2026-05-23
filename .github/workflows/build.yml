@@ -1,0 +1,48 @@
+name: build & run tests
+
+on:
+  - push
+  - pull_request
+
+permissions: read-all
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - ubuntu-latest
+          - macos-latest
+    runs-on: ${{ matrix.runs-on }}
+
+    steps:
+      - name: Checkout tree
+        uses: actions/checkout@v6
+
+      - name: Set up Chrome
+        # The test suite drives a real headless Chromium over CDP, so a browser must be
+        # present. Cdp.Chrome_path searches CDP_CHROME_PATH first, which we point at the
+        # binary this action installs.
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - run: echo "CDP_CHROME_PATH=${{ steps.setup-chrome.outputs.chrome-path }}" >> "$GITHUB_ENV"
+
+      - name: Set up dune
+        # Pin to the setup-dune commit that installs stable releases via
+        # get.dune.build. The v2 tag still uses dune-bin for explicit versions,
+        # which lacks recent stable releases; see
+        # https://github.com/ocaml-dune/setup-dune/issues/36.
+        uses: ocaml-dune/setup-dune@65aa18d6018a611f8ec2b3229091f4b6cd1d17de
+        with:
+          version: 3.23.1
+          steps: install-dune enable-pkg lazy-update-depexts install-gpatch install-depexts build-deps
+
+      - run: dune tool install ocamlformat
+
+      - run: dune build
+
+      - run: dune runtest
+
+      - run: dune fmt

@@ -4,7 +4,7 @@
     typed record shapes. The scope phantom in [Method.t] encodes which channel the method
     must be dispatched on:
     - [[ `Browser ]]: send via {!Connection.call} on the browser-level connection.
-    - [[ `Page ]]: send via {!Page.call} on a page handle (which carries the session_id).
+    - [[ `Page ]]: send via [Page.call] on a page handle (which carries the session_id).
 
     Methods that legitimately work in either scope would be declared with [_] scope. *)
 
