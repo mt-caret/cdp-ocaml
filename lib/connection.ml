@@ -2,19 +2,24 @@ open! Core
 open! Async
 open Jsonaf.Export
 
-module Json = struct
-  type t = Jsonaf.t
-
-  let jsonaf_of_t (x : t) = x
-  let t_of_jsonaf (x : t) = x
-end
-
 module Event = struct
   type t =
     { method_name : string
-    ; session_id : string option
     ; params : Jsonaf.t option
     }
+
+  module Kind = struct
+    module T = struct
+      type t =
+        [ `Session_id of string
+        | `No_session_id
+        ]
+      [@@deriving compare, hash, sexp_of]
+    end
+
+    include T
+    include Hashable.Make_plain (T)
+  end
 end
 
 module Wire = struct
@@ -31,7 +36,7 @@ module Wire = struct
       { id : int
       ; session_id : string option [@key "sessionId"] [@jsonaf.option]
       ; method_ : string [@key "method"]
-      ; params : Json.t
+      ; params : Jsonaf.t
       }
     [@@deriving jsonaf_of]
   end
@@ -39,11 +44,11 @@ module Wire = struct
   module Incoming = struct
     type t =
       { id : int option [@jsonaf.option]
-      ; result : Json.t option [@jsonaf.option]
+      ; result : Jsonaf.t option [@jsonaf.option]
       ; error : Error_body.t option [@jsonaf.option]
       ; method_ : string option [@key "method"] [@jsonaf.option]
       ; session_id : string option [@key "sessionId"] [@jsonaf.option]
-      ; params : Json.t option [@jsonaf.option]
+      ; params : Jsonaf.t option [@jsonaf.option]
       }
     [@@deriving of_jsonaf] [@@allow_extra_fields]
   end
@@ -51,30 +56,37 @@ end
 
 type t =
   { send_pipe : string Pipe.Writer.t
-  ; events_r : Event.t Pipe.Reader.t
+  ; subscribers : Event.t Pipe.Writer.t Bag.t Event.Kind.Table.t
   ; next_id : int ref
   ; pending : Jsonaf.t Or_error.t Ivar.t Int.Table.t
   }
 
-let events t = t.events_r
-
-let process_message ~pending s =
+let process_message ~subscribers ~pending s =
   [%log.global.debug "cdp-recv" ~json:s];
   match Jsonaf.parse s with
-  | Error err ->
-    [%log.global.error "cdp-recv-parse-failed" (err : Error.t) ~raw:s];
-    None
+  | Error err -> [%log.global.error "cdp-recv-parse-failed" (err : Error.t) ~raw:s]
   | Ok json ->
     let%tydi { id; result; error; method_; session_id; params } =
       [%of_jsonaf: Wire.Incoming.t] json
     in
     (match id, method_ with
-     | None, Some method_name -> Some { Event.method_name; session_id; params }
+     | None, None -> [%log.global.debug "cdp-recv-no-id-or-method" ~json:s]
+     | None, Some method_name ->
+       let kind =
+         match session_id with
+         | Some session_id -> `Session_id session_id
+         | None -> `No_session_id
+       in
+       (match Hashtbl.find subscribers kind with
+        | None -> [%log.global.debug "cdp-recv-no-subscribers" ~json:s]
+        | Some writers ->
+          (* TODO: Is error ever populated here? If so, subscribers should be
+ .           notified of them. *)
+          Bag.iter writers ~f:(fun writer ->
+            Pipe.write_without_pushback_if_open writer { Event.method_name; params }))
      | Some id, _ ->
        (match Hashtbl.find_and_remove pending id with
-        | None ->
-          [%log.global.error "cdp-recv-unknown-id" (id : int) ~raw:s];
-          ()
+        | None -> [%log.global.error "cdp-recv-unknown-id" (id : int) ~raw:s]
         | Some ivar ->
           let result =
             match error with
@@ -82,39 +94,27 @@ let process_message ~pending s =
               Or_error.error_s [%message "CDP error" ~_:(err : Wire.Error_body.t)]
             | None -> Ok (Option.value result ~default:(`Object []))
           in
-          Ivar.fill_exn ivar result);
-       None
-     | None, None -> None)
-;;
-
-let fail_pending pending error =
-  Hashtbl.iter pending ~f:(fun ivar -> Ivar.fill_if_empty ivar (Error error));
-  Hashtbl.clear pending
+          Ivar.fill_exn ivar result))
 ;;
 
 let connect uri =
   let open Deferred.Or_error.Let_syntax in
   let%map _response, ws = Cohttp_async_websocket.Client.create uri in
   let recv_pipe, send_pipe = Websocket.pipes ws in
-  let events_r, events_w = Pipe.create () in
+  let subscribers = Event.Kind.Table.create () in
   let pending = Int.Table.create () in
   don't_wait_for
     (let%bind.Deferred () =
-       Pipe.iter_without_pushback recv_pipe ~f:(fun s ->
-         match process_message ~pending s with
-         | None -> ()
-         | Some event -> Pipe.write_without_pushback_if_open events_w event)
+       Pipe.iter_without_pushback recv_pipe ~f:(process_message ~subscribers ~pending)
      in
-     Pipe.close events_w;
-     (* Fail all pending requests *)
+     Hashtbl.iter subscribers ~f:(fun writers -> Bag.iter writers ~f:Pipe.close);
+     (* Fail all pending requests. [Ivar.fill_exn] is safe: each id maps to one ivar
+        that is filled exactly once, here or in [process_message]. *)
      Hashtbl.iter pending ~f:(fun ivar ->
-       (* [Ivar.fill_exn] should never raise, since [pending] only contain ivars
-          that are waiting for a response and no async cycles run between
-          deferred binds. *)
        Ivar.fill_exn ivar (Or_error.error_string "CDP connection closed before response"));
      Hashtbl.clear pending;
      Deferred.unit);
-  { send_pipe; events_r; next_id = ref 0; pending }
+  { send_pipe; subscribers; next_id = ref 0; pending }
 ;;
 
 let connect_exn uri = connect uri >>| ok_exn
@@ -166,6 +166,20 @@ let call_page t ~session_id (method_ : (_, _, [ `Page ]) Method.t) params =
 let call_page_exn t ~session_id method_ params =
   call_page t ~session_id method_ params >>| ok_exn
 ;;
+
+let subscribe t kind =
+  let reader, writer = Pipe.create () in
+  let bag = Hashtbl.find_or_add t.subscribers kind ~default:(fun () -> Bag.create ()) in
+  let elt = Bag.add bag writer in
+  don't_wait_for
+    (let%map () = Pipe.closed reader in
+     Bag.remove bag elt;
+     if Bag.is_empty bag then Hashtbl.remove t.subscribers kind);
+  reader
+;;
+
+let events_for_session t ~session_id = subscribe t (`Session_id session_id)
+let events_without_session t = subscribe t `No_session_id
 
 let close t =
   Pipe.close t.send_pipe;

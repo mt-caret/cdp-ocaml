@@ -10,33 +10,32 @@ type t =
 let read_port_file path =
   let max_attempts = 200 in
   let delay = Time_ns.Span.of_int_ms 50 in
-  let rec poll n =
-    match%bind Sys.file_exists path with
-    | `Yes ->
-      let%bind contents = Reader.file_contents path in
-      (match String.split_lines contents with
-       | port_str :: ws_path :: _ ->
-         (match Int.of_string_opt (String.strip port_str) with
-          | Some port -> return (Ok (port, String.strip ws_path))
-          | None ->
-            return
-              (Or_error.error_s
-                 [%message "Bad port in DevToolsActivePort" (port_str : string)]))
-       | _ ->
-         return
-           (Or_error.error_s
-              [%message "DevToolsActivePort missing ws path" (contents : string)]))
-    | `No | `Unknown ->
-      (match n with
-       | 0 ->
-         return
-           (Or_error.error_s
-              [%message "Timed out waiting for DevToolsActivePort" (path : string)])
-       | _ ->
-         let%bind () = Clock_ns.after delay in
-         poll (n - 1))
+  let%bind.Deferred.Or_error () =
+    Deferred.repeat_until_finished max_attempts (fun attempts_left ->
+      match%bind Sys.file_exists path with
+      | `Yes -> return (`Finished (Ok ()))
+      | `No | `Unknown ->
+        (match attempts_left with
+         | 0 ->
+           return
+             (`Finished
+                 (Or_error.error_s
+                    [%message "Timed out waiting for DevToolsActivePort" (path : string)]))
+         | _ ->
+           let%map () = Clock_ns.after delay in
+           `Repeat (attempts_left - 1)))
   in
-  poll max_attempts
+  let%bind.Deferred contents = Reader.file_contents path in
+  match String.split_lines contents with
+  | port_str :: ws_path :: _ ->
+    (match Int.of_string_opt (String.strip port_str) with
+     | Some port -> Deferred.Or_error.return (port, String.strip ws_path)
+     | None ->
+       Deferred.Or_error.error_s
+         [%message "Bad port in DevToolsActivePort" (port_str : string)])
+  | _ ->
+    Deferred.Or_error.error_s
+      [%message "DevToolsActivePort missing ws path" (contents : string)]
 ;;
 
 let launch ?chrome_path ?(extra_args = []) () =

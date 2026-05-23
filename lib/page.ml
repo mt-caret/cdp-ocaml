@@ -34,30 +34,28 @@ let create connection =
 
 let create_exn connection = create connection >>| ok_exn
 
-let wait_for_load t =
-  let events = Connection.events t.connection in
+let wait_for_load events =
   Deferred.repeat_until_finished () (fun () ->
     match%map Pipe.read events with
     | `Eof -> `Finished ()
-    | `Ok { Connection.Event.method_name; session_id; params = _ } ->
-      let is_load_for_session =
-        String.equal method_name Protocol.Page.load_event_fired_method_name
-        && Option.equal String.equal session_id (Some t.session_id)
-      in
-      (match is_load_for_session with
+    | `Ok { Connection.Event.method_name; params = _ } ->
+      (match String.equal method_name Protocol.Page.load_event_fired_method_name with
        | true -> `Finished ()
        | false -> `Repeat ()))
 ;;
 
 let navigate ?(load_timeout = Time_ns.Span.of_int_sec 30) t ~url =
+  (* Subscribe before navigating so we don't miss the load event. *)
+  let events = Connection.events_for_session t.connection ~session_id:t.session_id in
   let do_navigate =
     let%bind.Deferred.Or_error (_ : Protocol.Page.Navigate.Result.t) =
       call t Protocol.Page.Navigate.method_ { url }
     in
-    let%map.Deferred () = wait_for_load t in
-    Ok ()
+    wait_for_load events |> Deferred.ok
   in
-  match%map.Deferred Clock_ns.with_timeout load_timeout do_navigate with
+  let%map.Deferred result = Clock_ns.with_timeout load_timeout do_navigate in
+  Pipe.close_read events;
+  match result with
   | `Result x -> x
   | `Timeout ->
     Or_error.error_s [%message "navigate: timed out" (load_timeout : Time_ns.Span.t)]

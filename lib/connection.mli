@@ -11,10 +11,10 @@ open! Async
 type t
 
 module Event : sig
-  (** A CDP event: a message pushed from the browser with no [id]. *)
+  (** A CDP event pushed from the browser. The session it belongs to is implied by which
+      subscription it came from ({!events_for_session} vs {!events_without_session}). *)
   type t =
     { method_name : string
-    ; session_id : string option
     ; params : Jsonaf.t option
     }
 end
@@ -65,5 +65,13 @@ val call_raw_exn
   -> unit
   -> Jsonaf.t Deferred.t
 
-val events : t -> Event.t Pipe.Reader.t
+(** Subscribe to events for a particular attached session. Each call mints a fresh pipe
+    and every matching event is broadcast to all live pipes, so independent consumers
+    never compete for the same event. Close the reader to unsubscribe. *)
+val events_for_session : t -> session_id:string -> Event.t Pipe.Reader.t
+
+(** Like {!events_for_session} but for events carrying no session id (browser-level
+    events such as [Target.attachedToTarget]). *)
+val events_without_session : t -> Event.t Pipe.Reader.t
+
 val close : t -> unit Deferred.t

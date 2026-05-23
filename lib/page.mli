@@ -37,7 +37,7 @@ val with_page
 
 val with_page_exn : Connection.t -> f:(t -> 'a Deferred.t) -> 'a Deferred.t
 
-(** The CDP session id attached to this page; useful for filtering {!Connection.events}
+(** The CDP session id attached to this page; useful for {!Connection.events_for_session}
     or sending raw page-scoped calls without going through {!navigate}/etc. *)
 val session_id : t -> string
 
