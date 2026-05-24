@@ -1,0 +1,34 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml
+   base
+   core
+   core_kernel
+   expect_test_helpers_core
+   jane-street-headers
+   jst-config
+   ppx_builtin
+   ppx_diff
+   ppx_jane
+   ppx_optcomp
+   ppx_stable_witness
+   sexplib
+   base-threads
+   dune
+   spawn)))
+
+(depexts
+ ((linux-headers)
+  (= %{os_family} alpine)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/core_unix/archive/a08d59520d5d3657e064d89924ea385f1847e5c6.tar.gz)
+  (checksum
+   sha256=1474b37fdc059740e4f0e5f39c85bb367e39621f489084fa87114e66de230b58)))

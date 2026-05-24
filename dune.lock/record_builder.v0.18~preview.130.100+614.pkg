@@ -1,0 +1,15 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml base ppx_jane dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/record_builder/archive/52b71a7fed0bd9cada67b66e479b7ff9924f5898.tar.gz)
+  (checksum
+   sha256=7eb9f80d64abe80b9a03b1a5f88ed592f50e98649bffaa945e1f2d8702120075)))

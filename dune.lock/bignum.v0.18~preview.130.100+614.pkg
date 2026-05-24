@@ -1,0 +1,25 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml
+   core
+   ppx_jane
+   ppx_stable_witness
+   sexplib
+   splittable_random
+   typerep
+   zarith_stubs_js
+   dune
+   num
+   zarith)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/bignum/archive/19e6ba3df2c7bf1e097be28b98455ddfdcda0b21.tar.gz)
+  (checksum
+   sha256=c1bc85b1704aaa8abccee912709d143f4e6a215821fdf627e3e3de2b1159b861)))

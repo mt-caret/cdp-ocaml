@@ -88,7 +88,7 @@ let connection t = t.connection
 let remove_user_data_dir t =
   match%map
     Monitor.try_with ~rest:`Log (fun () ->
-      Process.run_expect_no_output_exn ~prog:"rm" ~args:[ "-rf"; t.user_data_dir ] ())
+      Process.run_expect_no_stdout_exn ~prog:"rm" ~args:[ "-rf"; t.user_data_dir ] ())
   with
   | Ok () | Error _ -> ()
 ;;

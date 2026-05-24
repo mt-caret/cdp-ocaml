@@ -62,15 +62,15 @@ type t =
   }
 
 let process_message ~subscribers ~pending s =
-  [%log.global.debug "cdp-recv" ~json:s];
+  [%log.debug "cdp-recv" ~json:s];
   match Jsonaf.parse s with
-  | Error err -> [%log.global.error "cdp-recv-parse-failed" (err : Error.t) ~raw:s]
+  | Error err -> [%log.error "cdp-recv-parse-failed" (err : Error.t) ~raw:s]
   | Ok json ->
     let%tydi { id; result; error; method_; session_id; params } =
       [%of_jsonaf: Wire.Incoming.t] json
     in
     (match id, method_ with
-     | None, None -> [%log.global.debug "cdp-recv-no-id-or-method" ~json:s]
+     | None, None -> [%log.debug "cdp-recv-no-id-or-method" ~json:s]
      | None, Some method_name ->
        let kind =
          match session_id with
@@ -78,7 +78,7 @@ let process_message ~subscribers ~pending s =
          | None -> `No_session_id
        in
        (match Hashtbl.find subscribers kind with
-        | None -> [%log.global.debug "cdp-recv-no-subscribers" ~json:s]
+        | None -> [%log.debug "cdp-recv-no-subscribers" ~json:s]
         | Some writers ->
           (* TODO: Is error ever populated here? If so, subscribers should be
  .           notified of them. *)
@@ -86,7 +86,7 @@ let process_message ~subscribers ~pending s =
             Pipe.write_without_pushback_if_open writer { Event.method_name; params }))
      | Some id, _ ->
        (match Hashtbl.find_and_remove pending id with
-        | None -> [%log.global.error "cdp-recv-unknown-id" (id : int) ~raw:s]
+        | None -> [%log.error "cdp-recv-unknown-id" (id : int) ~raw:s]
         | Some ivar ->
           let result =
             match error with
@@ -128,7 +128,7 @@ let call_raw t ?session_id ~method_ ~params () =
     let envelope_str =
       [%jsonaf_of: Wire.Request.t] { id; session_id; method_; params } |> Jsonaf.to_string
     in
-    [%log.global.debug "cdp-send" ~json:envelope_str];
+    [%log.debug "cdp-send" ~json:envelope_str];
     let ivar = Ivar.create () in
     Hashtbl.set t.pending ~key:id ~data:ivar;
     let%bind () = Pipe.write t.send_pipe envelope_str in

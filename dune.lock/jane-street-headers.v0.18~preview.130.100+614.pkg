@@ -1,0 +1,15 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/jane-street-headers/archive/19b5eb69d47570fe907d51386393c1ef236ddbd1.tar.gz)
+  (checksum
+   sha256=4c014dc0a600fee898e70682e7159a586a435aa9274f7bacc73cd04bf02d42a3)))

@@ -1,0 +1,15 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml dune ppxlib)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/ppx_ignore_instrumentation/archive/28f471cb156390623e2bccddf56c55b15416b691.tar.gz)
+  (checksum
+   sha256=4cca6c45d917b2ec365d5ebaffb7c4faba52714487516b36ec414a2fccc9fc79)))

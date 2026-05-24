@@ -1,0 +1,15 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml base ppx_compare ppx_let ppx_sexp_conv ppxlib_jane dune ppxlib)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/ppx_fuelproof/archive/62373ab529d7f29226e3e367a17249d883172782.tar.gz)
+  (checksum
+   sha256=1bb7bff8f20f34b36a5f352a4832df30d8505e2abd424c8e6812a2970d6b3903)))

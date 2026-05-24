@@ -1,0 +1,15 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml core ppx_jane ppx_stable_witness dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/protocol_version_header/archive/53785a5231dcb199a7d9e7546d487efd230f96ec.tar.gz)
+  (checksum
+   sha256=554624b3d34b82deb85d0f105ff4add0eb6acd22e574b330b535315c054a4b79)))

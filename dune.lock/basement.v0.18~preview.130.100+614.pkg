@@ -1,0 +1,15 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/basement/archive/f38a9699b66b16d7b4dfc3aba25bf845d8b21b0b.tar.gz)
+  (checksum
+   sha256=06f77820c991b10c4d129c49902e83644293707d671136e97449d8b6040c9a56)))

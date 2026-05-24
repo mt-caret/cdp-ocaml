@@ -1,0 +1,15 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml base capsule0 ppx_sexp_conv ppx_template dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/capsule/archive/67c7be86cc923c181cab72407408cd6a64454edf.tar.gz)
+  (checksum
+   sha256=4ea0d74d05324dec72709844ead69cfbd761d2e9404d068e68c42d7800c8b97d)))

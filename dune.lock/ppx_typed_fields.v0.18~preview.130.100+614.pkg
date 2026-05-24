@@ -1,0 +1,32 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml
+   base
+   ppx_base
+   ppx_compare
+   ppx_enumerate
+   ppx_globalize
+   ppx_hash
+   ppx_pipebang
+   ppx_sexp_conv
+   ppx_sexp_message
+   ppx_string
+   ppx_template
+   ppxlib_jane
+   sexplib
+   sexplib0
+   univ_map
+   dune
+   ppxlib)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/ppx_typed_fields/archive/5329baea79a0140b13ec3bfe457d3acbe4ebc2c1.tar.gz)
+  (checksum
+   sha256=975341240eed4e3c38fd0ac7745faef7f3c26eec4368b074d62f92eadb5d2ffc)))

@@ -1,0 +1,15 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml base portable ppx_template dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/typerep/archive/c3c25b22f3e130f03330e0e1ba8d6194e63d9561.tar.gz)
+  (checksum
+   sha256=f71a67cb3cfaecb9416a8adf12a07d56334e2daa38d2cbd692c7a40147ed80fb)))

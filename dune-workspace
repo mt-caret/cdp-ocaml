@@ -1,5 +1,9 @@
-(lang dune 3.20)
+(lang dune 3.22)
+
+(repository
+ (name janestreet)
+ (url "git+https://github.com/janestreet/opam-repository.git"))
 
 (lock_dir
  (path dune.lock)
- (repositories overlay upstream))
+ (repositories janestreet overlay upstream))

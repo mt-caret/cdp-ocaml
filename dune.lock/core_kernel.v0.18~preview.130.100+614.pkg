@@ -1,0 +1,29 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml
+   base
+   bin_prot
+   core
+   int_repr
+   parsexp
+   ppx_jane
+   ppx_optcomp
+   ppx_sexp_conv
+   ppx_stable_witness
+   sexplib
+   univ_map
+   uopt
+   base-threads
+   dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/core_kernel/archive/4e6048fb3487243de0f66c10996d9d8e72ba6ed1.tar.gz)
+  (checksum
+   sha256=338c244208f77ba3ef5672f120837dc9ac82a4dbf931b33fcda88c6f1e6c3448)))

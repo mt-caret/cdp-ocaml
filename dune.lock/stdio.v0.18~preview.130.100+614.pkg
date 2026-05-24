@@ -1,0 +1,15 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml base sexplib0 dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/stdio/archive/1c6b05cd9fb3c720e4634e3d681d91fcf1be5336.tar.gz)
+  (checksum
+   sha256=f55e868513f30392414a4d0c64142f514c54796d9fdacd7f16a6122325c1f2ab)))

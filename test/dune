@@ -1,6 +1,6 @@
 (library
  (name cdp_tests)
  (inline_tests)
- (libraries cdp core core_kernel.nonempty_list async cohttp-async jsonaf re)
+ (libraries cdp core async cohttp-async jsonaf re)
  (preprocess
   (pps ppx_jane ppx_jsonaf_conv)))

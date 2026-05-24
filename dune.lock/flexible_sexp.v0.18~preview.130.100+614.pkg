@@ -1,0 +1,15 @@
+(version v0.18~preview.130.100+614)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml basement core ppx_jane string_dict dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/flexible_sexp/archive/1c2440a37c94390d11112c41790b3d347653fcfe.tar.gz)
+  (checksum
+   sha256=d969e01abee142207f09fe1d241c6f724efb68cd2c640cf714e5ec44c023dd01)))
