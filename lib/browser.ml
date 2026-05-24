@@ -87,10 +87,11 @@ let connection t = t.connection
 
 let remove_user_data_dir t =
   match%map
-    Monitor.try_with ~rest:`Log (fun () ->
-      Process.run_expect_no_stdout_exn ~prog:"rm" ~args:[ "-rf"; t.user_data_dir ] ())
+    Monitor.try_with_join_or_error ~rest:`Log (fun () ->
+      Process.run_expect_no_output ~prog:"rm" ~args:[ "-rf"; t.user_data_dir ] ())
   with
-  | Ok () | Error _ -> ()
+  | Ok () -> ()
+  | Error err -> [%log.error "Error removing user data dir" (err : Error.t)]
 ;;
 
 let send_cdp_close t =

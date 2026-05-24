@@ -1,0 +1,26 @@
+(version v0.18~preview.130.91+190)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml
+   async
+   async_ssl
+   async_websocket
+   core
+   ppx_jane
+   base64
+   cohttp
+   cohttp-async
+   dune
+   uri
+   uri-sexp)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/cohttp_async_websocket/archive/db667da9ae5825a9120aa21ae067b69cc0368dd2.tar.gz)
+  (checksum
+   sha256=a9b6e34e7dfbe7df3bcf7a59feb848d0c034fd531621c727ea3b86876e7c1347)))

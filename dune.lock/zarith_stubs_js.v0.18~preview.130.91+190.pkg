@@ -1,0 +1,15 @@
+(version v0.18~preview.130.91+190)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/zarith_stubs_js/archive/c913b10c75873997a51f088f86b7974a0e7fbd47.tar.gz)
+  (checksum
+   sha256=4a003f46230f2199552e2f280e91cc83e0c9396c68ad697d7ebece8c6ae3e3c6)))

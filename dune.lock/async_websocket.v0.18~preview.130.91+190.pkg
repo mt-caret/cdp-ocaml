@@ -1,0 +1,15 @@
+(version v0.18~preview.130.91+190)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml async async_rpc_kernel core core_kernel ppx_jane cryptokit dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/async_websocket/archive/51a69a70512eb049e5f2f9f6e86ed44475edf92b.tar.gz)
+  (checksum
+   sha256=817ef3004dfc75688a7ec830e1a2082320979edc9ad718fbd041b374926f618c)))

@@ -4,16 +4,16 @@ synopsis: "Native OCaml client for the Chrome DevTools Protocol"
 depends: [
   "ocaml" {>= "5.2.0" & < "5.3"}
   "dune" {>= "3.22"}
-  "core" {>= "v0.17.0" & < "v0.19"}
-  "core_kernel" {>= "v0.17.0" & < "v0.19"}
-  "bignum" {>= "v0.17.0" & < "v0.19"}
-  "async" {>= "v0.17.0" & < "v0.19"}
-  "jsonaf" {>= "v0.17.0" & < "v0.19"}
-  "ppx_jsonaf_conv" {>= "v0.17.0" & < "v0.19"}
-  "ppx_jane" {>= "v0.17.0" & < "v0.19"}
+  "core" {>= "v0.18~" & < "v0.19"}
+  "core_kernel" {>= "v0.18~" & < "v0.19"}
+  "bignum" {>= "v0.18~" & < "v0.19"}
+  "async" {>= "v0.18~" & < "v0.19"}
+  "jsonaf" {>= "v0.18~" & < "v0.19"}
+  "ppx_jsonaf_conv" {>= "v0.18~" & < "v0.19"}
+  "ppx_jane" {>= "v0.18~" & < "v0.19"}
   "cohttp-async" {>= "5.1.1" & < "6.0.0"}
-  "async_websocket" {>= "v0.17.0" & < "v0.19"}
-  "cohttp_async_websocket" {>= "v0.17.0" & < "v0.19"}
+  "async_websocket" {>= "v0.18~" & < "v0.19"}
+  "cohttp_async_websocket" {>= "v0.18~" & < "v0.19"}
   "base64" {>= "3.5.0"}
   "uri"
   "odoc" {with-doc}

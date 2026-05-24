@@ -2,7 +2,8 @@
 
 (repository
  (name janestreet)
- (url "git+https://github.com/janestreet/opam-repository.git"))
+ (url
+  "git+https://github.com/janestreet/opam-repository.git#64e4c78f3642220210f28bd49a078fd3c76c79d8"))
 
 (lock_dir
  (path dune.lock)

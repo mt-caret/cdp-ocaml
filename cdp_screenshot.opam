@@ -5,9 +5,9 @@ depends: [
   "ocaml" {>= "5.2.0" & < "5.3"}
   "dune" {>= "3.22"}
   "cdp" {= version}
-  "async" {>= "v0.17.0" & < "v0.19"}
-  "core" {>= "v0.17.0" & < "v0.19"}
-  "core_unix" {>= "v0.17.0" & < "v0.19"}
+  "async" {>= "v0.18~" & < "v0.19"}
+  "core" {>= "v0.18~" & < "v0.19"}
+  "core_unix" {>= "v0.18~" & < "v0.19"}
   "odoc" {with-doc}
 ]
 build: [
